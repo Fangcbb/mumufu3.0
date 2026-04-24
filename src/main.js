@@ -5,7 +5,6 @@ const app = document.querySelector('#app');
 
 const state = {
   route: 'selected',
-  mobileMenuOpen: false,
   lightboxOpen: false,
   lightboxImages: [],
   lightboxIndex: 0,
@@ -43,25 +42,26 @@ const prevImage = () => {
   render();
 };
 
-const flowPattern = [
-  'flow-wide',
-  'flow-tall offset-right',
-  'flow-square offset-left',
-  'flow-wide offset-right',
-  'flow-tall',
-  'flow-wide offset-left'
-];
+const projectLayoutClass = (projectIndex, imageIndex) => {
+  const presets = [
+    ['a-lead', 'a-side-top', 'a-side-bottom', 'a-left-mid', 'a-center-wide'],
+    ['b-left-tall', 'b-right-tall', 'b-cross-wide', 'b-float-left', 'b-float-right'],
+    ['c-left-hero', 'c-index-1', 'c-index-2', 'c-index-3', 'c-right-end']
+  ];
+
+  const set = presets[projectIndex % presets.length];
+  return set[imageIndex % set.length];
+};
 
 const selectedMarkup = () => {
   const sections = projectsWithCount
     .map((project, projectIndex) => {
       const imageCells = project.images
-        .map((image, imageIndex) => {
-          const flowClass = flowPattern[imageIndex % flowPattern.length];
-          return `<button class="flow-item ${flowClass} ${image.orientation}" data-open-project="${projectIndex}" data-open-index="${imageIndex}" aria-label="Open ${image.alt}">
+        .map(
+          (image, imageIndex) => `<button class="editorial-item ${projectLayoutClass(projectIndex, imageIndex)}" data-open-project="${projectIndex}" data-open-index="${imageIndex}" aria-label="Open ${image.alt}">
             <img src="${image.src}" alt="${image.alt}" loading="lazy" />
-          </button>`;
-        })
+          </button>`
+        )
         .join('');
 
       return `<section class="project-block">
@@ -69,7 +69,7 @@ const selectedMarkup = () => {
           <h2>${project.title}</h2>
           <p>[ ${project.count} ]</p>
         </header>
-        <div class="project-flow">${imageCells}</div>
+        <div class="project-layout layout-${(projectIndex % 3) + 1}">${imageCells}</div>
       </section>`;
     })
     .join('');
@@ -88,24 +88,30 @@ const catalogueMarkup = () => {
     .join('');
 
   return `<main class="page catalogue-page">
-    <div class="catalogue-grid">${list}</div>
+    <div class="catalogue-stream">${list}</div>
   </main>`;
 };
 
 const infoMarkup = () => `<main class="page info-page">
-  <section class="info-block">
-    <p class="info-label">Studio</p>
-    <p>Yun Mu Studio is a photography practice working across campaigns, editorial and moving image.</p>
+  <section>
+    <p>YUN MU</p>
+    <p>PHOTOGRAPHER / DIRECTOR</p>
+    <p>NEW YORK</p>
   </section>
-  <section class="info-block">
-    <p class="info-label">Contact</p>
-    <p>hello@yunmustudio.com</p>
-    <p>New York + London</p>
+  <section>
+    <p>CONTACT</p>
+    <p><a href="mailto:hello@yunmustudio.com">HELLO@YUNMUSTUDIO.COM</a></p>
   </section>
-  <section class="info-block">
-    <p class="info-label">Links</p>
-    <p><a href="#" aria-label="Instagram link placeholder">Instagram</a></p>
-    <p><a href="#" aria-label="Mail link placeholder">Email</a></p>
+  <section>
+    <p>SELECTED CLIENTS</p>
+    <p>MICROSOFT</p>
+    <p>ARC'TERYX</p>
+    <p>OAKLEY</p>
+    <p>NIKE</p>
+  </section>
+  <section>
+    <p>SOCIAL</p>
+    <p><a href="#" aria-label="Instagram link placeholder">INSTAGRAM</a></p>
   </section>
 </main>`;
 
@@ -136,8 +142,8 @@ const render = () => {
   app.innerHTML = `
     <div class="site-shell">
       <header class="topbar">
-        <button class="menu-trigger" data-mobile-toggle aria-label="Toggle navigation">Menu</button>
-        <nav class="nav ${state.mobileMenuOpen ? 'open' : ''}" aria-label="Primary">
+        <span class="menu-label">Menu</span>
+        <nav class="nav" aria-label="Primary">
           <a href="#selected" class="${state.route === 'selected' ? 'active' : ''}">Selected</a>
           <a href="#catalogue" class="${state.route === 'catalogue' ? 'active' : ''}">Catalogue</a>
           <a href="#info" class="${state.route === 'info' ? 'active' : ''}">Info</a>
@@ -152,11 +158,6 @@ const render = () => {
 };
 
 const bindEvents = () => {
-  document.querySelector('[data-mobile-toggle]')?.addEventListener('click', () => {
-    state.mobileMenuOpen = !state.mobileMenuOpen;
-    render();
-  });
-
   document.querySelectorAll('[data-open-project]').forEach((button) => {
     button.addEventListener('click', (event) => {
       const projectIndex = Number(event.currentTarget.dataset.openProject);
@@ -196,7 +197,6 @@ const bindEvents = () => {
 
 window.addEventListener('hashchange', () => {
   state.route = normalizeRoute();
-  state.mobileMenuOpen = false;
   render();
 });
 
