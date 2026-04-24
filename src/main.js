@@ -5,7 +5,6 @@ const app = document.querySelector('#app');
 
 const state = {
   route: 'selected',
-  theme: localStorage.getItem('studio-theme') || 'light',
   mobileMenuOpen: false,
   lightboxOpen: false,
   lightboxImages: [],
@@ -16,16 +15,8 @@ const state = {
 
 const normalizeRoute = () => {
   const hash = window.location.hash.replace('#', '').trim();
-  if (['selected', 'catalogue', 'info'].includes(hash)) {
-    return hash;
-  }
+  if (['selected', 'catalogue', 'info'].includes(hash)) return hash;
   return 'selected';
-};
-
-const setTheme = (theme) => {
-  state.theme = theme;
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem('studio-theme', theme);
 };
 
 const openLightbox = (images, index) => {
@@ -52,12 +43,22 @@ const prevImage = () => {
   render();
 };
 
+const flowPattern = [
+  'flow-wide',
+  'flow-tall offset-right',
+  'flow-square offset-left',
+  'flow-wide offset-right',
+  'flow-tall',
+  'flow-wide offset-left'
+];
+
 const selectedMarkup = () => {
   const sections = projectsWithCount
     .map((project, projectIndex) => {
       const imageCells = project.images
         .map((image, imageIndex) => {
-          return `<button class="image-tile ${image.orientation}" data-open-project="${projectIndex}" data-open-index="${imageIndex}" aria-label="Open ${image.alt}">
+          const flowClass = flowPattern[imageIndex % flowPattern.length];
+          return `<button class="flow-item ${flowClass} ${image.orientation}" data-open-project="${projectIndex}" data-open-index="${imageIndex}" aria-label="Open ${image.alt}">
             <img src="${image.src}" alt="${image.alt}" loading="lazy" />
           </button>`;
         })
@@ -65,13 +66,10 @@ const selectedMarkup = () => {
 
       return `<section class="project-block">
         <header class="project-header">
-          <p class="project-index">[ ${String(projectIndex + 1).padStart(2, '0')} ]</p>
-          <div>
-            <h2>${project.title} <span>[ ${project.count} ]</span></h2>
-            <p>${project.description}</p>
-          </div>
+          <h2>${project.title}</h2>
+          <p>[ ${project.count} ]</p>
         </header>
-        <div class="selected-grid">${imageCells}</div>
+        <div class="project-flow">${imageCells}</div>
       </section>`;
     })
     .join('');
@@ -84,66 +82,47 @@ const catalogueMarkup = () => {
     .map(
       (image, index) => `<button class="catalogue-item ${image.orientation}" data-open-catalogue="${index}" aria-label="Open ${image.alt}">
       <img src="${image.src}" alt="${image.alt}" loading="lazy" />
-      <span>${image.globalIndex}</span>
+      <span>${image.projectTitle}</span>
     </button>`
     )
     .join('');
 
   return `<main class="page catalogue-page">
-    <header class="catalogue-header">
-      <p>Catalogue</p>
-      <small>${allImages.length} images / ${projectsWithCount.length} projects</small>
-    </header>
     <div class="catalogue-grid">${list}</div>
   </main>`;
 };
 
 const infoMarkup = () => `<main class="page info-page">
-  <section>
-    <p class="label">Profile</p>
-    <h1>Yun Mu Studio</h1>
-    <p class="lead">
-      Commercial photography studio focused on quiet image systems for fashion, objects, and editorial commissions.
-      We build restrained visual narratives with precise lighting, spacing, and texture.
-    </p>
+  <section class="info-block">
+    <p class="info-label">Studio</p>
+    <p>Yun Mu Studio is a photography practice working across campaigns, editorial and moving image.</p>
   </section>
-  <section class="info-columns">
-    <div>
-      <p class="label">Services</p>
-      <ul>
-        <li>Campaign Photography</li>
-        <li>Art Direction</li>
-        <li>Still Life & Product</li>
-        <li>Portrait & Casting</li>
-        <li>Visual Identity Imagery</li>
-      </ul>
-    </div>
-    <div>
-      <p class="label">Contact</p>
-      <p>hello@yunmustudio.com</p>
-      <p>+1 212 555 0199</p>
-      <p>New York / Remote Worldwide</p>
-    </div>
-    <div>
-      <p class="label">Social</p>
-      <p><a href="#" aria-label="Instagram link placeholder">Instagram</a></p>
-      <p><a href="#" aria-label="Behance link placeholder">Behance</a></p>
-      <p><a href="#" aria-label="Are.na link placeholder">Are.na</a></p>
-    </div>
+  <section class="info-block">
+    <p class="info-label">Contact</p>
+    <p>hello@yunmustudio.com</p>
+    <p>New York + London</p>
+  </section>
+  <section class="info-block">
+    <p class="info-label">Links</p>
+    <p><a href="#" aria-label="Instagram link placeholder">Instagram</a></p>
+    <p><a href="#" aria-label="Mail link placeholder">Email</a></p>
   </section>
 </main>`;
 
 const lightboxMarkup = () => {
   if (!state.lightboxOpen) return '';
   const current = state.lightboxImages[state.lightboxIndex];
+  const currentCount = `${state.lightboxIndex + 1}/${state.lightboxImages.length}`;
+
   return `<div class="lightbox" role="dialog" aria-modal="true">
-    <button class="lightbox-close" data-lightbox-close aria-label="Close">Close</button>
-    <button class="lightbox-nav prev" data-lightbox-prev aria-label="Previous">‹</button>
+    <button class="lightbox-close" data-lightbox-close aria-label="Close">[ x ] Close</button>
+    <p class="lightbox-count">${currentCount}</p>
+    <p class="lightbox-sound">Sound [ off ]</p>
+    <button class="lightbox-hit prev" data-lightbox-prev aria-label="Previous image"></button>
     <figure class="lightbox-frame">
       <img src="${current.src}" alt="${current.alt}" />
-      <figcaption>${current.alt}</figcaption>
     </figure>
-    <button class="lightbox-nav next" data-lightbox-next aria-label="Next">›</button>
+    <button class="lightbox-hit next" data-lightbox-next aria-label="Next image"></button>
   </div>`;
 };
 
@@ -154,17 +133,14 @@ const pageMarkup = () => {
 };
 
 const render = () => {
-  setTheme(state.theme);
   app.innerHTML = `
     <div class="site-shell">
       <header class="topbar">
-        <a class="brand" href="#selected">Monochrome Studio</a>
-        <button class="mobile-menu-button" data-mobile-toggle aria-label="Toggle navigation">Menu</button>
+        <button class="menu-trigger" data-mobile-toggle aria-label="Toggle navigation">Menu</button>
         <nav class="nav ${state.mobileMenuOpen ? 'open' : ''}" aria-label="Primary">
           <a href="#selected" class="${state.route === 'selected' ? 'active' : ''}">Selected</a>
           <a href="#catalogue" class="${state.route === 'catalogue' ? 'active' : ''}">Catalogue</a>
           <a href="#info" class="${state.route === 'info' ? 'active' : ''}">Info</a>
-          <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme">${state.theme === 'light' ? 'Dark' : 'Light'}</button>
         </nav>
       </header>
       ${pageMarkup()}
@@ -178,11 +154,6 @@ const render = () => {
 const bindEvents = () => {
   document.querySelector('[data-mobile-toggle]')?.addEventListener('click', () => {
     state.mobileMenuOpen = !state.mobileMenuOpen;
-    render();
-  });
-
-  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
-    setTheme(state.theme === 'light' ? 'dark' : 'light');
     render();
   });
 
@@ -207,9 +178,7 @@ const bindEvents = () => {
 
   const lightbox = document.querySelector('.lightbox');
   lightbox?.addEventListener('click', (event) => {
-    if (event.target === lightbox) {
-      closeLightbox();
-    }
+    if (event.target === lightbox) closeLightbox();
   });
 
   lightbox?.addEventListener('touchstart', (event) => {
@@ -239,7 +208,5 @@ window.addEventListener('keydown', (event) => {
 });
 
 state.route = normalizeRoute();
-if (!window.location.hash) {
-  window.location.hash = '#selected';
-}
+if (!window.location.hash) window.location.hash = '#selected';
 render();
